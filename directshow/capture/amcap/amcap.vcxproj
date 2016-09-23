@@ -180,6 +180,7 @@
   <ItemGroup>
     <ClInclude Include="amcap.h" />
     <ClInclude Include="crossbar.h" />
+    <ClInclude Include="sample-grabber.hpp" />
     <ClInclude Include="SampleCGB.h" />
     <ClInclude Include="status.h" />
     <ClInclude Include="stdafx.h" />
