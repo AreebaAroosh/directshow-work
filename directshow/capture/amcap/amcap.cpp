@@ -58,22 +58,6 @@ public:
 	}
 };
 
-#if 0
-STDMETHODIMP CallbackObject::SampleCB(double SampleTime, IMediaSample *pSample)
-{
-	if (!pSample)
-		return E_POINTER;
-	long sz = pSample->GetActualDataLength();
-	BYTE *pBuf = NULL;
-	pSample->GetPointer(&pBuf);
-	if (sz <= 0 || pBuf == NULL) return E_UNEXPECTED;
-	for (int i = 0; i<sz; i += 2)
-		pBuf[i] = 255 - pBuf[i];
-	pSample->Release();
-	return S_OK;
-}
-#endif
-
 //------------------------------------------------------------------------------
 // Macros
 //------------------------------------------------------------------------------
@@ -86,9 +70,6 @@ STDMETHODIMP CallbackObject::SampleCB(double SampleTime, IMediaSample *pSample)
 //
 // To enable registration in this sample, define REGISTER_FILTERGRAPH.
 //
-#ifdef  DEBUG
-#define REGISTER_FILTERGRAPH
-#endif
 
 // {C1F400A0-3F08-11D3-9F0B-006008039E37}
 DEFINE_GUID(CLSID_SampleGrabber,
@@ -97,16 +78,16 @@ DEFINE_GUID(CLSID_SampleGrabber,
 //------------------------------------------------------------------------------
 // Global data
 //------------------------------------------------------------------------------
-HINSTANCE ghInstApp=0;
-HACCEL ghAccel=0;
-HFONT  ghfontApp=0;
-TEXTMETRIC gtm={0};
-TCHAR gszAppName[]=TEXT("AMCAP");
-HWND ghwndApp=0, ghwndStatus=0;
-HDEVNOTIFY ghDevNotify=0;
-PUnregisterDeviceNotification gpUnregisterDeviceNotification=0;
-PRegisterDeviceNotification gpRegisterDeviceNotification=0;
-DWORD g_dwGraphRegister=0;
+static HINSTANCE ghInstApp=0;
+static HACCEL ghAccel=0;
+static HFONT  ghfontApp=0;
+static TEXTMETRIC gtm={0};
+static TCHAR gszAppName[]=TEXT("AMCAP");
+static HWND ghwndApp=0, ghwndStatus=0;
+static HDEVNOTIFY ghDevNotify=0;
+static PUnregisterDeviceNotification gpUnregisterDeviceNotification=0;
+static PRegisterDeviceNotification gpRegisterDeviceNotification=0;
+static DWORD g_dwGraphRegister=0;
 
 struct _capstuff
 {
@@ -144,13 +125,15 @@ struct _capstuff
     LONG NumberOfVideoInputs;
     HMENU hMenuPopup;
     int iNumVCapDevices;
-} gcap;
+};
 
-
+// can't thread local due to COM object apartments
+// XXX TODO convert to object
+static struct _capstuff gcap;
 
 // implements IAMCopyCaptureFileProgress
 //
-class CProgress : public IAMCopyCaptureFileProgress
+class CProgress final : public IAMCopyCaptureFileProgress
 {
     public:
 
@@ -207,29 +190,29 @@ class CProgress : public IAMCopyCaptureFileProgress
 // Function Prototypes
 //------------------------------------------------------------------------------
 typedef LONG(PASCAL *LPWNDPROC)(HWND, UINT, WPARAM, LPARAM); // pointer to a window procedure
-LONG WINAPI AppWndProc(HWND hwnd, UINT uiMessage, WPARAM wParam, LPARAM lParam);
-LONG PASCAL AppCommand(HWND hwnd, unsigned msg, WPARAM wParam, LPARAM lParam);
-BOOL CALLBACK AboutDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+static LONG WINAPI AppWndProc(HWND hwnd, UINT uiMessage, WPARAM wParam, LPARAM lParam);
+static LONG PASCAL AppCommand(HWND hwnd, unsigned msg, WPARAM wParam, LPARAM lParam);
+static BOOL CALLBACK AboutDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-void ErrMsg(LPTSTR sz,...);
+static void ErrMsg(LPTSTR sz,...);
 
-int DoDialog(HWND hwndParent, int DialogID, DLGPROC fnDialog, long lParam);
+static int DoDialog(HWND hwndParent, int DialogID, DLGPROC fnDialog, long lParam);
 
-void TearDownGraph(void);
-BOOL BuildPreviewGraph();
+static void TearDownGraph(void);
+static BOOL BuildPreviewGraph();
 
-void AddDevicesToMenu();
-void ChooseDevices(TCHAR *szVideo);
-void ChooseDevices(IMoniker *pmVideo);
+static void AddDevicesToMenu();
+static void ChooseDevices(TCHAR *szVideo);
+static void ChooseDevices(IMoniker *pmVideo);
 
-BOOL InitCapFilters();
-void FreeCapFilters();
+static BOOL InitCapFilters();
+static void FreeCapFilters();
 
-BOOL StopPreview();
-BOOL StartPreview();
+static BOOL StopPreview();
+static BOOL StartPreview();
 
-void MakeMenuOptions();
-void OnClose();
+static void MakeMenuOptions();
+static void OnClose();
 
 
 
@@ -237,7 +220,7 @@ void OnClose();
 // Name: SetAppCaption()
 // Desc: Set the caption to be the application name followed by the capture file
 //------------------------------------------------------------------------------
-void SetAppCaption()
+static void SetAppCaption()
 {
     TCHAR tach[_MAX_PATH + 80];
 
@@ -263,7 +246,7 @@ void SetAppCaption()
 |       TRUE if successful, FALSE if not                                       |
 |                                                                              |
 \*----------------------------------------------------------------------------*/
-BOOL AppInit(HINSTANCE hInst, HINSTANCE hPrev, int sw)
+static BOOL AppInit(HINSTANCE hInst, HINSTANCE hPrev, int sw)
 {
     WNDCLASS    cls;
     HDC         hdc;
@@ -391,7 +374,7 @@ BOOL AppInit(HINSTANCE hInst, HINSTANCE hPrev, int sw)
     return TRUE;
 }
 
-void IMonRelease(IMoniker *&pm)
+static void IMonRelease(IMoniker *&pm)
 {
     if(pm)
     {
@@ -477,7 +460,7 @@ int PASCAL WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR szCmdLine, int sw)
 |       0 if processed, nonzero if ignored                                     |
 |                                                                              |
 \*----------------------------------------------------------------------------*/
-LONG WINAPI  AppWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+static LONG WINAPI  AppWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     PAINTSTRUCT ps;
     HDC hdc;
@@ -695,7 +678,7 @@ LONG WINAPI  AppWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 // Make a graph builder object we can use for capture graph building
 //
-BOOL MakeBuilder()
+static BOOL MakeBuilder()
 {
     // we have one already
     if(gcap.pBuilder)
@@ -713,7 +696,7 @@ BOOL MakeBuilder()
 
 // Make a graph object we can use for capture graph building
 //
-BOOL MakeGraph()
+static BOOL MakeGraph()
 {
     // we have one already
     if(gcap.pFg)
@@ -725,7 +708,6 @@ BOOL MakeGraph()
     return (hr == NOERROR) ? TRUE : FALSE;
 }
 
-
 // make sure the preview window inside our window is as big as the
 // dimensions of captured video, or some capture cards won't show a preview.
 // (Also, it helps people tell what size video they're capturing)
@@ -733,11 +715,11 @@ BOOL MakeGraph()
 // is positioned at the bottom there will be enough room for the preview
 // window to be w x h
 //
-int gnRecurse = 0;
 
-
-void ResizeWindow(int w, int h)
+static void ResizeWindow(int w, int h)
 {
+    static thread_local int gnRecurse = 0;
+
     RECT rcW, rcC;
     int xExtra, yExtra;
     int cyBorder = GetSystemMetrics(SM_CYBORDER);
@@ -766,7 +748,7 @@ void ResizeWindow(int w, int h)
 
 
 // Tear down everything downstream of a given filter
-void RemoveDownstream(IBaseFilter *pf)
+static void RemoveDownstream(IBaseFilter *pf)
 {
     IPin *pP=0, *pTo=0;
     ULONG u;
@@ -815,7 +797,7 @@ void RemoveDownstream(IBaseFilter *pf)
 // and WDM filters upstream of them, because then all the capture settings
 // we've set would be lost.
 //
-void TearDownGraph()
+static void TearDownGraph()
 {
 	SAFE_RELEASE(gcap.pGrabber);
     SAFE_RELEASE(gcap.pSink);
@@ -839,18 +821,6 @@ void TearDownGraph()
     if(gcap.pVCap)
         gcap.pBuilder->ReleaseFilters();
 
-    // potential debug output - what the graph looks like
-    // if (gcap.pFg) DumpGraph(gcap.pFg, 1);
-
-#ifdef REGISTER_FILTERGRAPH
-    // Remove filter graph from the running object table
-    if(g_dwGraphRegister)
-    {
-        RemoveGraphFromRot(g_dwGraphRegister);
-        g_dwGraphRegister = 0;
-    }
-#endif
-
     gcap.fCaptureGraphBuilt = FALSE;
     gcap.fPreviewGraphBuilt = FALSE;
     gcap.fPreviewFaked = FALSE;
@@ -860,7 +830,7 @@ void TearDownGraph()
 // create the capture filters of the graph.  We need to keep them loaded from
 // the beginning, so we can set parameters on them and have them remembered
 //
-BOOL InitCapFilters()
+static BOOL InitCapFilters()
 {
     HRESULT hr=S_OK;
     BOOL f;
@@ -998,7 +968,7 @@ InitCapFiltersFail:
 
 // all done with the capture filters and the graph builder
 //
-void FreeCapFilters()
+static void FreeCapFilters()
 {
     SAFE_RELEASE(gcap.pFg);
     if( gcap.pBuilder )
@@ -1026,9 +996,8 @@ void FreeCapFilters()
 // IAMStreamConfig) and then the app can programmatically call IAMStreamConfig
 // to set the format on both pins.
 //
-BOOL BuildPreviewGraph()
+static BOOL BuildPreviewGraph()
 {
-	int cy, cyBorder;
 	HRESULT hr;
 
 	// we have one already
@@ -1054,101 +1023,16 @@ BOOL BuildPreviewGraph()
 	// the interleaved pin.  Using the Video pin on a DV filter is only useful if
 	// you don't want the audio.
 
-	if (0)
-	{
-		hr = gcap.pBuilder->RenderStream(&PIN_CATEGORY_PREVIEW,
-			&MEDIATYPE_Interleaved, gcap.pVCap, NULL, NULL);
-		if (hr == VFW_S_NOPREVIEWPIN)
-		{
-			// preview was faked up for us using the (only) capture pin
-			gcap.fPreviewFaked = TRUE;
-		}
-		else if (hr != S_OK)
-		{
-			// maybe it's DV?
-			hr = gcap.pBuilder->RenderStream(&PIN_CATEGORY_PREVIEW,
-				&MEDIATYPE_Video, gcap.pVCap, NULL, NULL);
-			if (hr == VFW_S_NOPREVIEWPIN)
-			{
-				// preview was faked up for us using the (only) capture pin
-				gcap.fPreviewFaked = TRUE;
-			}
-			else if (hr != S_OK)
-			{
-				ErrMsg(TEXT("This graph cannot preview!"));
-				gcap.fPreviewGraphBuilt = FALSE;
-				return FALSE;
-			}
-		}
-	}
-	else
-	{
-		CHECK(CoCreateInstance(CLSID_SampleGrabber, NULL, CLSCTX_INPROC_SERVER, IID_ISampleGrabber, (void**)&gcap.pGrabber));
+	CHECK(CoCreateInstance(CLSID_SampleGrabber, NULL, CLSCTX_INPROC_SERVER, IID_ISampleGrabber, (void**)&gcap.pGrabber));
 
-		CHECK(gcap.pGrabber->SetCallback(&gcap.callback, 1));
-		CHECK(gcap.pGrabber->SetBufferSamples(TRUE));
+	CHECK(gcap.pGrabber->SetCallback(&gcap.callback, 1));
+	CHECK(gcap.pGrabber->SetBufferSamples(TRUE));
 
-		CHECK(gcap.pGrabber->QueryInterface(IID_IBaseFilter, (void**)&gcap.pVW));
+	CHECK(gcap.pGrabber->QueryInterface(IID_IBaseFilter, (void**)&gcap.pVW));
 
-		CHECK(gcap.pFg->AddFilter(gcap.pVW, L"Sample Crapper"));
+	CHECK(gcap.pFg->AddFilter(gcap.pVW, L"Sample Crapper"));
 
-		CHECK(gcap.pBuilder->RenderStream(NULL, NULL, gcap.pVCap, NULL, gcap.pVW));
-
-		//gcap.pBuilder->RenderStream(NULL, NULL, gcap.pVW, NULL, NULL);
-	}
-
-#if 0
-    //
-    // Get the preview window to be a child of our app's window
-    //
-
-    // This will find the IVideoWindow interface on the renderer.  It is
-    // important to ask the filtergraph for this interface... do NOT use
-    // ICaptureGraphBuilder2::FindInterface, because the filtergraph needs to
-    // know we own the window so it can give us display changed messages, etc.
-
-    hr = gcap.pFg->QueryInterface(IID_IVideoWindow, (void **)&gcap.pVW);
-    if(hr != NOERROR)
-    {
-        ErrMsg(TEXT("This graph cannot preview properly"));
-    }
-    else
-    {
-        RECT rc;
-        gcap.pVW->put_Owner((OAHWND)ghwndApp);    // We own the window now
-        gcap.pVW->put_WindowStyle(WS_CHILD);    // you are now a child
-
-        // give the preview window all our space but where the status bar is
-        GetClientRect(ghwndApp, &rc);
-        cyBorder = GetSystemMetrics(SM_CYBORDER);
-        cy = statusGetHeight() + cyBorder;
-        rc.bottom -= cy;
-
-        gcap.pVW->SetWindowPosition(0, 0, rc.right, rc.bottom); // be this big
-        gcap.pVW->put_Visible(OATRUE);
-    }
-
-    // make sure we process events while we're previewing!
-    hr = gcap.pFg->QueryInterface(IID_IMediaEventEx, (void **)&gcap.pME);
-    if(hr == NOERROR)
-    {
-        gcap.pME->SetNotifyWindow((OAHWND)ghwndApp, WM_FGNOTIFY, 0);
-    }
-
-    // potential debug output - what the graph looks like
-    // DumpGraph(gcap.pFg, 1);
-
-    // Add our graph to the running object table, which will allow
-    // the GraphEdit application to "spy" on our graph
-#ifdef REGISTER_FILTERGRAPH
-    hr = AddGraphToRot(gcap.pFg, &g_dwGraphRegister);
-    if(FAILED(hr))
-    {
-        ErrMsg(TEXT("Failed to register filter graph with ROT!  hr=0x%x"), hr);
-        g_dwGraphRegister = 0;
-    }
-#endif
-#endif
+	CHECK(gcap.pBuilder->RenderStream(NULL, NULL, gcap.pVCap, NULL, gcap.pVW));
 
     // All done.
     gcap.fPreviewGraphBuilt = TRUE;
@@ -1164,7 +1048,7 @@ fail:
 
 // Start previewing
 //
-BOOL StartPreview()
+static BOOL StartPreview()
 {
 	if (gcap.previewing)
 		return TRUE;
@@ -1199,7 +1083,7 @@ BOOL StartPreview()
 
 // stop the preview graph
 //
-BOOL StopPreview()
+static BOOL StopPreview()
 {
 	if (!gcap.previewing)
 		return TRUE;
@@ -1279,7 +1163,7 @@ BOOL StopPreview()
 // your custom page to call the interfaces programmatically.
 
 
-void MakeMenuOptions()
+static void MakeMenuOptions()
 {
     HRESULT hr;
     HMENU hMenuSub = GetSubMenu(GetMenu(ghwndApp), 2); // Options menu
@@ -1415,7 +1299,7 @@ void MakeMenuOptions()
 
 // Check the devices we're currently using and make filters for them
 //
-void ChooseDevices(IMoniker *pmVideo)
+static void ChooseDevices(IMoniker *pmVideo)
 {
 #define VERSIZE 40
 #define DESCSIZE 80
@@ -1493,7 +1377,7 @@ void ChooseDevices(IMoniker *pmVideo)
     statusUpdateStatus(ghwndStatus, gcap.wachFriendlyName);
 }
 
-void ChooseDevices(TCHAR *szVideo)
+static void ChooseDevices(TCHAR *szVideo)
 {
 	WCHAR wszVideo[1024];
 
@@ -1551,7 +1435,7 @@ CleanUp:
 
 // put all installed video and audio devices in the menus
 //
-void AddDevicesToMenu()
+static void AddDevicesToMenu()
 {
     if(gcap.fDeviceMenuPopulated)
     {
@@ -1657,7 +1541,7 @@ void AddDevicesToMenu()
 |
 |    Process all of our WM_COMMAND messages.
 \*----------------------------------------------------------------------------*/
-LONG PASCAL AppCommand(HWND hwnd, unsigned msg, WPARAM wParam, LPARAM lParam)
+static LONG PASCAL AppCommand(HWND hwnd, unsigned msg, WPARAM wParam, LPARAM lParam)
 {
     HRESULT hr;
     int id = GET_WM_COMMAND_ID(wParam, lParam);
@@ -1921,7 +1805,7 @@ LONG PASCAL AppCommand(HWND hwnd, unsigned msg, WPARAM wParam, LPARAM lParam)
 |   ErrMsg - Opens a Message box with a error message in it.  The user can     |
 |            select the OK button to continue                                  |
 \*----------------------------------------------------------------------------*/
-void ErrMsg(LPTSTR szFormat,...)
+static void ErrMsg(LPTSTR szFormat,...)
 {
     static TCHAR szBuffer[2048]={0};
     const size_t NUMCHARS = sizeof(szBuffer) / sizeof(szBuffer[0]);
@@ -1950,7 +1834,7 @@ void ErrMsg(LPTSTR szFormat,...)
  *
  */
 
-BOOL CALLBACK AboutDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+static BOOL CALLBACK AboutDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     switch(msg)
     {
@@ -1964,173 +1848,7 @@ BOOL CALLBACK AboutDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
     return FALSE;
 }
 
-// Display a dialog box
-//
-int DoDialog(HWND hwndParent, int DialogID, DLGPROC fnDialog, long lParam)
-{
-    DLGPROC fn;
-    int result;
-
-    fn = (DLGPROC)MakeProcInstance(fnDialog, ghInstApp);
-    result = (int) DialogBoxParam(ghInstApp,
-                                  MAKEINTRESOURCE(DialogID),
-                                  hwndParent,
-                                  fn,
-                                  lParam);
-    FreeProcInstance(fn);
-
-    return result;
-}
-
-
-//
-// This function can be used when loading libraries in the Windows System
-// folder.  It queries for the system folder and prepends the path to the
-// name of the target library.  This helps to prevent spoofing of system DLLs.
-//
-// NOTE: Using this function may break apps who use Windows Fusion or who
-// explicitly replace Windows DLLs in the application's local folder.
-// If security is paramount, you can use this as a replacement for LoadLibrary().
-//
-HMODULE UtilLoadLibrary(LPCTSTR lpFileName)
-{
-    TCHAR szFullPath[MAX_PATH];
-    BOOL fSuccess = FALSE;
-    size_t nLibLength = 0;
-
-    if (lpFileName == NULL)
-    {
-        return NULL;
-    }
-
-    // Prevent buffer overflow by limiting size of library name
-    if (FAILED(StringCchLength(lpFileName, MAX_PATH, &nLibLength)))
-    {
-        return NULL;
-    }
-
-    // nLibLength does not include the terminating NULL, so it must be strictly less than MAX_PATH
-
-    if(nLibLength >= MAX_PATH)
-    {
-        return NULL;
-    }
-
-    int nSpaceAllowed = (int)(MAX_PATH - nLibLength - 4); // Allow for '\' and '\0'
-    int nSpaceUsed = 0;
-
-    // Initialize to a NULL string
-    szFullPath[0] = TEXT('\0');
-
-    // Read the Windows System directory
-    nSpaceUsed = GetSystemDirectory(szFullPath, nSpaceAllowed);
-
-    // If the function fails, the return value will be zero.
-    // If the buffer isn't large enough, the function will return the size
-    // of the buffer required to hold the path.  Check both failures.
-    if((nSpaceUsed != 0) && (nSpaceUsed <= nSpaceAllowed))
-    {
-        // Now we have the Windows/System path with enough space left
-        // to add the libary name and a terminating NULL character
-        HRESULT hr = StringCchCat(szFullPath, MAX_PATH, TEXT("\\\0"));
-        hr = StringCchCat(szFullPath, MAX_PATH, lpFileName);
-        hr = StringCchCat(szFullPath, MAX_PATH, TEXT("\0"));
-        fSuccess = TRUE;
-    }
-
-    if(!fSuccess)
-    {
-        // An error occurred, so fallback to the default behavior by using
-        // the NULL-terminated library name provided as a parameter.
-        StringCchCopy(szFullPath, MAX_PATH, lpFileName);
-
-        // Must succeed because lpFileName < MAX_PATH
-    }
-
-    return ((HMODULE) LoadLibrary(szFullPath));
-}
-
-
-//
-// GetFreeDiskSpace: Function to Measure Available Disk Space
-//
-static long GetFreeDiskSpaceInKB(LPTSTR pFile)
-{
-    DWORD dwFreeClusters, dwBytesPerSector, dwSectorsPerCluster, dwClusters;
-    TCHAR RootName[MAX_PATH];
-    LPTSTR ptmp=0;    //required arg
-    ULARGE_INTEGER ulA, ulB, ulFreeBytes;
-
-    // need to find path for root directory on drive containing this file.
-    if (0 == GetFullPathName(pFile, NUMELMS(RootName), RootName, &ptmp))
-    {
-        return -1;
-    }
-
-    // truncate this to the name of the root directory (how tedious)
-    if(RootName[0] == '\\' && RootName[1] == '\\')
-    {
-        // path begins with  \\server\share\path so skip the first
-        // three backslashes
-        ptmp = &RootName[2];
-        while(*ptmp && (*ptmp != '\\'))
-        {
-            ptmp++;
-        }
-        if(*ptmp)
-        {
-            // advance past the third backslash
-            ptmp++;
-        }
-    }
-    else
-    {
-        // path must be drv:\path
-        ptmp = RootName;
-    }
-
-    // find next backslash and put a null after it
-    while(*ptmp && (*ptmp != '\\'))
-    {
-        ptmp++;
-    }
-
-    // found a backslash ?
-    if(*ptmp)
-    {
-        // skip it and insert null
-        ptmp++;
-        *ptmp = '\0';
-    }
-
-    // the only real way of finding out free disk space is calling
-    // GetDiskFreeSpaceExA, but it doesn't exist on Win95
-
-    HINSTANCE h = LoadLibrary(TEXT("kernel32.dll\0"));
-    if(h)
-    {
-        typedef BOOL(WINAPI *MyFunc)(LPCTSTR RootName, PULARGE_INTEGER pulA, PULARGE_INTEGER pulB, PULARGE_INTEGER pulFreeBytes);
-
-        MyFunc pfnGetDiskFreeSpaceEx = (MyFunc)GetProcAddress(h, "GetDiskFreeSpaceExW");
-        FreeLibrary(h);
-
-        if(pfnGetDiskFreeSpaceEx)
-        {
-            if(!pfnGetDiskFreeSpaceEx(RootName, &ulA, &ulB, &ulFreeBytes))
-                return -1;
-            else
-                return (long)(ulFreeBytes.QuadPart / 1024);
-        }
-    }
-
-    if(!GetDiskFreeSpace(RootName, &dwSectorsPerCluster, &dwBytesPerSector,
-                         &dwFreeClusters, &dwClusters))
-        return (-1);
-    else
-        return(MulDiv(dwSectorsPerCluster * dwBytesPerSector, dwFreeClusters, 1024));
-}
-
-void OnClose()
+static void OnClose()
 {
     // Unregister device notifications
     if(ghDevNotify != NULL)
