@@ -346,11 +346,15 @@ static void IMonRelease(IMoniker *&pm)
 \*----------------------------------------------------------------------------*/
 int PASCAL WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR szCmdLine, int sw)
 {
-	(void)AllocConsole();
-	AttachConsole(GetCurrentProcessId());
-	freopen("CON", "w", stdout);
-	freopen("CON", "w", stderr);
-	freopen("CON", "r", stdin);
+#if 1
+    if (!AttachConsole(ATTACH_PARENT_PROCESS))
+        (void)AllocConsole();
+
+    freopen("CONOUT$", "a", stdout);
+    freopen("CONOUT$", "a", stderr);
+    freopen("CONIN$", "r", stdin);
+#endif
+    DbgInitialise(GetModuleHandle(NULL));
     MSG msg;
 
     /* Call initialization procedure */
