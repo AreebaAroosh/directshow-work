@@ -1631,6 +1631,8 @@ static LONG PASCAL AppCommand(HWND hwnd, unsigned msg, WPARAM wParam, LPARAM lPa
             }
             else if(id - MENU_DIALOG0 == gcap.iVCapCapturePinDialogPos)
             {
+                // XXX here's logic for selecting framerate and resolution
+
                 // You can change this pin's output format in these dialogs.
                 // If the capture pin is already connected to somebody who's
                 // fussy about the connection type, that may prevent using
