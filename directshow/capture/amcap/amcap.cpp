@@ -22,7 +22,7 @@
 #include "SampleCGB.h"
 #include "sample-grabber.hpp"
 
-#define CHECK(expr) if (!SUCCEEDED(hr = (expr))) goto fail
+#define check(expr) if (!SUCCEEDED(hr = (expr))) goto fail
 
 class CallbackObject : public ISampleGrabberCB{
 public:
@@ -131,61 +131,6 @@ struct _capstuff
 // XXX TODO convert to object
 static struct _capstuff gcap;
 
-// implements IAMCopyCaptureFileProgress
-//
-class CProgress final : public IAMCopyCaptureFileProgress
-{
-    public:
-
-    CProgress()
-    {
-    };
-    ~CProgress()
-    {
-    };
-
-    STDMETHODIMP_(ULONG) AddRef()
-    {
-        return 1;
-    };
-    STDMETHODIMP_(ULONG) Release()
-    {
-        return 0;
-    };
-
-    STDMETHODIMP QueryInterface(REFIID iid, void **p)
-    {
-		if (p == NULL)
-		{
-			return E_POINTER;
-		}
-        if (iid == IID_IUnknown)
-        {
-            *p = reinterpret_cast<IUnknown*>(this);
-			AddRef();
-			return S_OK;
-        }
-        else if (iid == IID_IAMCopyCaptureFileProgress)
-        {
-            *p = reinterpret_cast<IAMCopyCaptureFileProgress*>(this);
-			AddRef();
-			return S_OK;
-        }
-        else
-        {
-            return E_NOINTERFACE;
-        }
-    };
-    STDMETHODIMP Progress(int i)
-    {
-        TCHAR tach[80];
-        HRESULT hr = StringCchPrintf(tach, 80, TEXT("Save File Progress: %d%%\0"), i);
-        statusUpdateStatus(ghwndStatus, tach);
-        return S_OK;
-    };
-};
-
-
 //------------------------------------------------------------------------------
 // Function Prototypes
 //------------------------------------------------------------------------------
@@ -195,8 +140,6 @@ static LONG PASCAL AppCommand(HWND hwnd, unsigned msg, WPARAM wParam, LPARAM lPa
 static BOOL CALLBACK AboutDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 static void ErrMsg(LPTSTR sz,...);
-
-static int DoDialog(HWND hwndParent, int DialogID, DLGPROC fnDialog, long lParam);
 
 static void TearDownGraph(void);
 static BOOL BuildPreviewGraph();
@@ -1023,16 +966,16 @@ static BOOL BuildPreviewGraph()
 	// the interleaved pin.  Using the Video pin on a DV filter is only useful if
 	// you don't want the audio.
 
-	CHECK(CoCreateInstance(CLSID_SampleGrabber, NULL, CLSCTX_INPROC_SERVER, IID_ISampleGrabber, (void**)&gcap.pGrabber));
+	check(CoCreateInstance(CLSID_SampleGrabber, NULL, CLSCTX_INPROC_SERVER, IID_ISampleGrabber, (void**)&gcap.pGrabber));
 
-	CHECK(gcap.pGrabber->SetCallback(&gcap.callback, 1));
-	CHECK(gcap.pGrabber->SetBufferSamples(TRUE));
+	check(gcap.pGrabber->SetCallback(&gcap.callback, 1));
+	check(gcap.pGrabber->SetBufferSamples(TRUE));
 
-	CHECK(gcap.pGrabber->QueryInterface(IID_IBaseFilter, (void**)&gcap.pVW));
+	check(gcap.pGrabber->QueryInterface(IID_IBaseFilter, (void**)&gcap.pVW));
 
-	CHECK(gcap.pFg->AddFilter(gcap.pVW, L"Sample Crapper"));
+	check(gcap.pFg->AddFilter(gcap.pVW, L"Sample Crapper"));
 
-	CHECK(gcap.pBuilder->RenderStream(NULL, NULL, gcap.pVCap, NULL, gcap.pVW));
+	check(gcap.pBuilder->RenderStream(NULL, NULL, gcap.pVCap, NULL, gcap.pVW));
 
     // All done.
     gcap.fPreviewGraphBuilt = TRUE;
