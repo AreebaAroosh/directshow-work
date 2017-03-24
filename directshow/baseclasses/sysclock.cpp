@@ -12,7 +12,7 @@
 #include <limits.h>
 
 
-#ifdef FILTER_DLL
+#if 0
 
 /* List of class IDs and creator functions for the class factory. This
    provides the link between the OLE entry point in the DLL and an object

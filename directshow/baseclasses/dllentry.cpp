@@ -1,3 +1,4 @@
+#if 0
 //------------------------------------------------------------------------------
 // File: DlleEntry.cpp
 //
@@ -22,12 +23,15 @@
 #endif // DEBUG
 #include <strsafe.h>
 
+#if 0
 extern CFactoryTemplate g_Templates[];
 extern int g_cTemplates;
+#endif
 
-HINSTANCE g_hInst;
 DWORD	  g_amPlatform;		// VER_PLATFORM_WIN32_WINDOWS etc... (from GetVersionEx)
 OSVERSIONINFO g_osInfo;
+
+HINSTANCE g_hInst;
 
 //
 // an instance of this is created by the DLLGetClassObject entrypoint
@@ -196,7 +200,7 @@ DllGetClassObject(
     if (!(riid == IID_IUnknown) && !(riid == IID_IClassFactory)) {
             return E_NOINTERFACE;
     }
-
+#if 0
     // traverse the array of templates looking for one with this
     // class id
     for (int i = 0; i < g_cTemplates; i++) {
@@ -214,6 +218,7 @@ DllGetClassObject(
             return NOERROR;
         }
     }
+#endif
     return CLASS_E_CLASSNOTAVAILABLE;
 }
 
@@ -223,6 +228,7 @@ DllGetClassObject(
 void
 DllInitClasses(BOOL bLoading)
 {
+#if 0
     int i;
 
     // traverse the array of templates calling the init routine
@@ -233,7 +239,7 @@ DllInitClasses(BOOL bLoading)
             (*pT->m_lpfnInit)(bLoading, pT->m_ClsID);
         }
     }
-
+#endif
 }
 
 // called by COM to determine if this dll can be unloaded
@@ -327,7 +333,7 @@ _DllEntryPoint(
 
 #ifdef DEBUG
         if (CBaseObject::ObjectsActive()) {
-            DbgSetModuleLevel(LOG_MEMORY, 2);
+            //DbgSetModuleLevel(LOG_MEMORY, 2);
             TCHAR szInfo[512];
             extern TCHAR m_ModuleName[];     // Cut down module name
 
@@ -365,3 +371,5 @@ _DllEntryPoint(
 }
 
 
+
+#endif

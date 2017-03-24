@@ -1,3 +1,4 @@
+#if 0
 //------------------------------------------------------------------------------
 // File: DllSetup.cpp
 //
@@ -19,8 +20,10 @@
 //---------------------------------------------------------------------------
 // externally defined functions/variable
 
+#if 0
 extern int g_cTemplates;
 extern CFactoryTemplate g_Templates[];
+#endif
 
 //---------------------------------------------------------------------------
 //
@@ -313,6 +316,7 @@ RegisterAllServers( LPCWSTR szFileName, BOOL bRegister )
 {
   HRESULT hr = NOERROR;
 
+#if 0
   for( int i = 0; i < g_cTemplates; i++ )
   {
     // get i'th template
@@ -341,7 +345,7 @@ RegisterAllServers( LPCWSTR szFileName, BOOL bRegister )
     if( FAILED(hr) )
       break;
   }
-
+#endif
   return hr;
 }
 
@@ -691,3 +695,5 @@ AMovieDllUnregisterServer()
 
   return hr;
 }
+
+#endif
