@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.26228.9
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "amcap", "amcap.vcxproj", "{FA57B413-94FE-411A-A182-A2CF276CA145}"
+	ProjectSection(ProjectDependencies) = postProject
+		{23D40A9E-134E-4E3E-84E5-E4022ED6F331} = {23D40A9E-134E-4E3E-84E5-E4022ED6F331}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "baseclasses", "baseclasses\baseclasses.vcxproj", "{23D40A9E-134E-4E3E-84E5-E4022ED6F331}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{FA57B413-94FE-411A-A182-A2CF276CA145}.Release|x86.ActiveCfg = Release|Win32
+		{FA57B413-94FE-411A-A182-A2CF276CA145}.Release|x86.Build.0 = Release|Win32
+		{23D40A9E-134E-4E3E-84E5-E4022ED6F331}.Release|x86.ActiveCfg = Release|Win32
+		{23D40A9E-134E-4E3E-84E5-E4022ED6F331}.Release|x86.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

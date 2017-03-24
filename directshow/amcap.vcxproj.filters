@@ -7,7 +7,7 @@
     </Filter>
     <Filter Include="Header Files">
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
     </Filter>
     <Filter Include="Resource Files">
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
@@ -15,44 +15,38 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="amcap.cpp">
+    <ClCompile Include="capture\amcap\amcap.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="crossbar.cpp">
+    <ClCompile Include="capture\amcap\SampleCGB.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="SampleCGB.cpp">
+    <ClCompile Include="capture\amcap\status.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="status.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="stdafx.cpp">
+    <ClCompile Include="capture\amcap\stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="amcap.h">
+    <ClInclude Include="capture\amcap\amcap.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="crossbar.h">
+    <ClInclude Include="capture\amcap\SampleCGB.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="SampleCGB.h">
+    <ClInclude Include="capture\amcap\sample-grabber.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="status.h">
+    <ClInclude Include="capture\amcap\status.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="stdafx.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="sample-grabber.hpp">
+    <ClInclude Include="capture\amcap\stdafx.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="amcap.rc">
+    <ResourceCompile Include="capture\amcap\amcap.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
   </ItemGroup>
