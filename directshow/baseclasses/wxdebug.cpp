@@ -61,7 +61,6 @@ const INT iMAXLEVELS = NUMELMS(pKeyNames);  // Maximum debug categories
 
 HINSTANCE m_hInst;                          // Module instance handle
 TCHAR m_ModuleName[iDEBUGINFO];             // Cut down module name
-DWORD m_Levels[iMAXLEVELS];                 // Debug level per category
 CRITICAL_SECTION m_CSDebug;                 // Controls access to list
 DWORD m_dwNextCookie;                       // Next active object ID
 ObjectDesc *pListHead = NULL;               // First active object
@@ -72,13 +71,33 @@ DWORD dwWaitTimeout = INFINITE;             // Default timeout value
 DWORD dwTimeOffset;			    // Time of first DbgLog call
 bool g_fUseKASSERT = false;                 // don't create messagebox
 bool g_fDbgInDllEntryPoint = false;
-bool g_fAutoRefreshLevels = false;
 
-LPCTSTR pBaseKey = TEXT("SOFTWARE\\Microsoft\\DirectShow\\Debug");
-LPCTSTR pGlobalKey = TEXT("GLOBAL");
+//LPCTSTR pBaseKey = TEXT("SOFTWARE\\Microsoft\\DirectShow\\Debug");
+//LPCTSTR pGlobalKey = TEXT("GLOBAL");
 static CHAR *pUnknownName = "UNKNOWN";
 
 LPCTSTR TimeoutName = TEXT("TIMEOUT");
+
+/* Called by DbgInitGlobalSettings to setup alternate logging destinations
+*/
+
+void WINAPI DbgInitLogTo()
+{
+    TCHAR szFile[MAX_PATH] = {0};
+
+    // if an output-to was specified.  try to open it.
+    //
+    if (m_hOutput != INVALID_HANDLE_VALUE) {
+        EXECUTE_ASSERT(CloseHandle (m_hOutput));
+        m_hOutput = INVALID_HANDLE_VALUE;
+    }
+    m_hOutput = GetStdHandle (STD_OUTPUT_HANDLE);
+    if (m_hOutput == INVALID_HANDLE_VALUE) {
+        AllocConsole ();
+        m_hOutput = GetStdHandle (STD_OUTPUT_HANDLE);
+    }
+    SetConsoleTitle (TEXT("ActiveX Debug Output"));
+}
 
 /* This sets the instance handle that the debug library uses to find
    the module's file name from the Win32 GetModuleFileName function */
@@ -90,10 +109,9 @@ void WINAPI DbgInitialise(HINSTANCE hInst)
 
     m_hInst = hInst;
     DbgInitModuleName();
+    DbgInitLogTo();
     if (GetProfileInt(m_ModuleName, TEXT("BreakOnLoad"), 0))
        DebugBreak();
-    DbgInitModuleSettings(false);
-    DbgInitGlobalSettings(true);
     dwTimeOffset = timeGetTime();
 }
 
@@ -114,96 +132,15 @@ void WINAPI DbgTerminate()
     m_bInit = FALSE;
 }
 
-
-/* This is called by DbgInitLogLevels to read the debug settings
-   for each logging category for this module from the registry */
-
-void WINAPI DbgInitKeyLevels(HKEY hKey, bool fTakeMax)
-{
-    LONG lReturn;               // Create key return value
-    LONG lKeyPos;               // Current key category
-    DWORD dwKeySize;            // Size of the key value
-    DWORD dwKeyType;            // Receives it's type
-    DWORD dwKeyValue;           // This fields value
-
-    /* Try and read a value for each key position in turn */
-    for (lKeyPos = 0;lKeyPos < iMAXLEVELS;lKeyPos++) {
-
-        dwKeySize = sizeof(DWORD);
-        lReturn = RegQueryValueEx(
-            hKey,                       // Handle to an open key
-            pKeyNames[lKeyPos],         // Subkey name derivation
-            NULL,                       // Reserved field
-            &dwKeyType,                 // Returns the field type
-            (LPBYTE) &dwKeyValue,       // Returns the field's value
-            &dwKeySize );               // Number of bytes transferred
-
-        /* If either the key was not available or it was not a DWORD value
-           then we ensure only the high priority debug logging is output
-           but we try and update the field to a zero filled DWORD value */
-
-        if (lReturn != ERROR_SUCCESS || dwKeyType != REG_DWORD)  {
-
-            dwKeyValue = 0;
-            lReturn = RegSetValueEx(
-                hKey,                   // Handle of an open key
-                pKeyNames[lKeyPos],     // Address of subkey name
-                (DWORD) 0,              // Reserved field
-                REG_DWORD,              // Type of the key field
-                (PBYTE) &dwKeyValue,    // Value for the field
-                sizeof(DWORD));         // Size of the field buffer
-
-            if (lReturn != ERROR_SUCCESS) {
-                DbgLog((LOG_ERROR,1,TEXT("Could not create subkey %s"),pKeyNames[lKeyPos]));
-                dwKeyValue = 0;
-            }
-        }
-        if(fTakeMax)
-        {
-            m_Levels[lKeyPos] = max(dwKeyValue,m_Levels[lKeyPos]);
-        }
-        else
-        {
-            if((m_Levels[lKeyPos] & LOG_FORCIBLY_SET) == 0) {
-                m_Levels[lKeyPos] = dwKeyValue;
-            }
-        }
-    }
-
-    /*  Read the timeout value for catching hangs */
-    dwKeySize = sizeof(DWORD);
-    lReturn = RegQueryValueEx(
-        hKey,                       // Handle to an open key
-        TimeoutName,                // Subkey name derivation
-        NULL,                       // Reserved field
-        &dwKeyType,                 // Returns the field type
-        (LPBYTE) &dwWaitTimeout,    // Returns the field's value
-        &dwKeySize );               // Number of bytes transferred
-
-    /* If either the key was not available or it was not a DWORD value
-       then we ensure only the high priority debug logging is output
-       but we try and update the field to a zero filled DWORD value */
-
-    if (lReturn != ERROR_SUCCESS || dwKeyType != REG_DWORD)  {
-
-        dwWaitTimeout = INFINITE;
-        lReturn = RegSetValueEx(
-            hKey,                   // Handle of an open key
-            TimeoutName,            // Address of subkey name
-            (DWORD) 0,              // Reserved field
-            REG_DWORD,              // Type of the key field
-            (PBYTE) &dwWaitTimeout, // Value for the field
-            sizeof(DWORD));         // Size of the field buffer
-
-        if (lReturn != ERROR_SUCCESS) {
-            DbgLog((LOG_ERROR,1,TEXT("Could not create subkey %s"),pKeyNames[lKeyPos]));
-            dwWaitTimeout = INFINITE;
-        }
-    }
-}
-
 void WINAPI DbgOutString(LPCTSTR psz)
 {
+    fwprintf(stderr, psz);
+    fflush(stderr);
+
+#if 0
+    if (m_hOutput == INVALID_HANDLE_VALUE)
+        m_hOutput = GetStdHandle(STD_ERROR_HANDLE);
+
     if (m_hOutput != INVALID_HANDLE_VALUE) {
         UINT  cb = lstrlen(psz);
         DWORD dw;
@@ -217,6 +154,7 @@ void WINAPI DbgOutString(LPCTSTR psz)
     } else {
         OutputDebugString (psz);
     }
+#endif
 }
 
 
@@ -262,186 +200,12 @@ HRESULT  DbgUniqueProcessName(LPCTSTR inName, LPTSTR outName)
 }
 
 
-/* Called by DbgInitGlobalSettings to setup alternate logging destinations
- */
-
-void WINAPI DbgInitLogTo (
-    HKEY hKey)
-{
-    LONG  lReturn;
-    DWORD dwKeyType;
-    DWORD dwKeySize;
-    TCHAR szFile[MAX_PATH] = {0};
-    static const TCHAR cszKey[] = TEXT("LogToFile");
-
-    dwKeySize = MAX_PATH;
-    lReturn = RegQueryValueEx(
-        hKey,                       // Handle to an open key
-        cszKey,                     // Subkey name derivation
-        NULL,                       // Reserved field
-        &dwKeyType,                 // Returns the field type
-        (LPBYTE) szFile,            // Returns the field's value
-        &dwKeySize);                // Number of bytes transferred
-
-    // create an empty key if it does not already exist
-    //
-    if (lReturn != ERROR_SUCCESS || dwKeyType != REG_SZ)
-       {
-       dwKeySize = sizeof(TCHAR);
-       lReturn = RegSetValueEx(
-            hKey,                   // Handle of an open key
-            cszKey,                 // Address of subkey name
-            (DWORD) 0,              // Reserved field
-            REG_SZ,                 // Type of the key field
-            (PBYTE)szFile,          // Value for the field
-            dwKeySize);            // Size of the field buffer
-       }
-
-    // if an output-to was specified.  try to open it.
-    //
-    if (m_hOutput != INVALID_HANDLE_VALUE) {
-       EXECUTE_ASSERT(CloseHandle (m_hOutput));
-       m_hOutput = INVALID_HANDLE_VALUE;
-    }
-    if (szFile[0] != 0)
-       {
-       if (!lstrcmpi(szFile, TEXT("Console"))) {
-          m_hOutput = GetStdHandle (STD_OUTPUT_HANDLE);
-          if (m_hOutput == INVALID_HANDLE_VALUE) {
-             AllocConsole ();
-             m_hOutput = GetStdHandle (STD_OUTPUT_HANDLE);
-          }
-          SetConsoleTitle (TEXT("ActiveX Debug Output"));
-       } else if (szFile[0] &&
-                lstrcmpi(szFile, TEXT("Debug")) &&
-                lstrcmpi(szFile, TEXT("Debugger")) &&
-                lstrcmpi(szFile, TEXT("Deb")))
-          {
-            m_hOutput = CreateFile(szFile, GENERIC_WRITE,
-                                 FILE_SHARE_READ,
-                                 NULL, OPEN_ALWAYS,
-                                 FILE_ATTRIBUTE_NORMAL,
-                                 NULL);
-
-            if (INVALID_HANDLE_VALUE == m_hOutput &&
-                GetLastError() == ERROR_SHARING_VIOLATION)
-            {
-               TCHAR uniqueName[MAX_PATH] = {0};
-               if (SUCCEEDED(DbgUniqueProcessName(szFile, uniqueName)))
-               {
-                    m_hOutput = CreateFile(uniqueName, GENERIC_WRITE,
-                                         FILE_SHARE_READ,
-                                         NULL, OPEN_ALWAYS,
-                                         FILE_ATTRIBUTE_NORMAL,
-                                         NULL);
-               }
-            }
-               
-            if (INVALID_HANDLE_VALUE != m_hOutput)
-            {
-              static const TCHAR cszBar[] = TEXT("\r\n\r\n=====DbgInitialize()=====\r\n\r\n");
-              SetFilePointer (m_hOutput, 0, NULL, FILE_END);
-              DbgOutString (cszBar);
-            }
-          }
-       }
-}
-
 
 
 /* This is called by DbgInitLogLevels to read the global debug settings for
    each logging category for this module from the registry. Normally each
    module has it's own values set for it's different debug categories but
    setting the global SOFTWARE\Debug\Global applies them to ALL modules */
-
-void WINAPI DbgInitGlobalSettings(bool fTakeMax)
-{
-    LONG lReturn;               // Create key return value
-    TCHAR szInfo[iDEBUGINFO];   // Constructs key names
-    HKEY hGlobalKey;            // Global override key
-
-    /* Construct the global base key name */
-    (void)StringCchPrintf(szInfo,NUMELMS(szInfo),TEXT("%s\\%s"),pBaseKey,pGlobalKey);
-
-    /* Create or open the key for this module */
-    lReturn = RegCreateKeyEx(HKEY_LOCAL_MACHINE,   // Handle of an open key
-                             szInfo,               // Address of subkey name
-                             (DWORD) 0,            // Reserved value
-                             NULL,                 // Address of class name
-                             (DWORD) 0,            // Special options flags
-                             GENERIC_READ | GENERIC_WRITE,   // Desired security access
-                             NULL,                 // Key security descriptor
-                             &hGlobalKey,          // Opened handle buffer
-                             NULL);                // What really happened
-
-    if (lReturn != ERROR_SUCCESS) {
-        lReturn = RegCreateKeyEx(HKEY_LOCAL_MACHINE,   // Handle of an open key
-                                 szInfo,               // Address of subkey name
-                                 (DWORD) 0,            // Reserved value
-                                 NULL,                 // Address of class name
-                                 (DWORD) 0,            // Special options flags
-                                 GENERIC_READ,         // Desired security access
-                                 NULL,                 // Key security descriptor
-                                 &hGlobalKey,          // Opened handle buffer
-                                 NULL);                // What really happened
-        if (lReturn != ERROR_SUCCESS) {
-            DbgLog((LOG_ERROR,1,TEXT("Could not access GLOBAL module key")));
-        }
-        return;
-    }
-
-    DbgInitKeyLevels(hGlobalKey, fTakeMax);
-    RegCloseKey(hGlobalKey);
-}
-
-
-/* This sets the debugging log levels for the different categories. We start
-   by opening (or creating if not already available) the SOFTWARE\Debug key
-   that all these settings live under. We then look at the global values
-   set under SOFTWARE\Debug\Global which apply on top of the individual
-   module settings. We then load the individual module registry settings */
-
-void WINAPI DbgInitModuleSettings(bool fTakeMax)
-{
-    LONG lReturn;               // Create key return value
-    TCHAR szInfo[iDEBUGINFO];   // Constructs key names
-    HKEY hModuleKey;            // Module key handle
-
-    /* Construct the base key name */
-    (void)StringCchPrintf(szInfo,NUMELMS(szInfo),TEXT("%s\\%s"),pBaseKey,m_ModuleName);
-
-    /* Create or open the key for this module */
-    lReturn = RegCreateKeyEx(HKEY_LOCAL_MACHINE,   // Handle of an open key
-                             szInfo,               // Address of subkey name
-                             (DWORD) 0,            // Reserved value
-                             NULL,                 // Address of class name
-                             (DWORD) 0,            // Special options flags
-                             GENERIC_READ | GENERIC_WRITE, // Desired security access
-                             NULL,                 // Key security descriptor
-                             &hModuleKey,          // Opened handle buffer
-                             NULL);                // What really happened
-
-    if (lReturn != ERROR_SUCCESS) {
-        lReturn = RegCreateKeyEx(HKEY_LOCAL_MACHINE,   // Handle of an open key
-                                 szInfo,               // Address of subkey name
-                                 (DWORD) 0,            // Reserved value
-                                 NULL,                 // Address of class name
-                                 (DWORD) 0,            // Special options flags
-                                 GENERIC_READ,         // Desired security access
-                                 NULL,                 // Key security descriptor
-                                 &hModuleKey,          // Opened handle buffer
-                                 NULL);                // What really happened
-        if (lReturn != ERROR_SUCCESS) {
-            DbgLog((LOG_ERROR,1,TEXT("Could not access module key")));
-        }
-        return;
-    }
-
-    DbgInitLogTo(hModuleKey);
-    DbgInitKeyLevels(hModuleKey, fTakeMax);
-    RegCloseKey(hModuleKey);
-}
-
 
 /* Initialise the module file name */
 
@@ -643,65 +407,9 @@ void WINAPI DbgBreakPoint(LPCTSTR pFileName,INT iLine,__format_string LPCTSTR sz
 
 BOOL WINAPI DbgCheckModuleLevel(DWORD Type,DWORD Level)
 {
-    if(g_fAutoRefreshLevels)
-    {
-        // re-read the registry every second. We cannot use RegNotify() to
-        // notice registry changes because it's not available on win9x.
-        static DWORD g_dwLastRefresh = 0;
-        DWORD dwTime = timeGetTime();
-        if(dwTime - g_dwLastRefresh > 1000) {
-            g_dwLastRefresh = dwTime;
-
-            // there's a race condition: multiple threads could update the
-            // values. plus read and write not synchronized. no harm
-            // though.
-            DbgInitModuleSettings(false);
-        }
-    }
-
-
-    DWORD Mask = 0x01;
-
-    // If no valid bits are set return FALSE
-    if ((Type & ((1<<iMAXLEVELS)-1))) {
-
-	// speed up unconditional output.
-	if (0==Level)
-	    return(TRUE);
-	
-        for (LONG lKeyPos = 0;lKeyPos < iMAXLEVELS;lKeyPos++) {
-            if (Type & Mask) {
-                if (Level <= (m_Levels[lKeyPos] & ~LOG_FORCIBLY_SET)) {
-                    return TRUE;
-                }
-            }
-            Mask <<= 1;
-        }
-    }
-    return FALSE;
+    return TRUE;
 }
 
-
-/* Set debug levels to a given value */
-
-void WINAPI DbgSetModuleLevel(DWORD Type, DWORD Level)
-{
-    DWORD Mask = 0x01;
-
-    for (LONG lKeyPos = 0;lKeyPos < iMAXLEVELS;lKeyPos++) {
-        if (Type & Mask) {
-            m_Levels[lKeyPos] = Level | LOG_FORCIBLY_SET;
-        }
-        Mask <<= 1;
-    }
-}
-
-/* whether to check registry values periodically. this isn't turned
-   automatically because of the potential performance hit. */
-void WINAPI DbgSetAutoRefreshLevels(bool fAuto)
-{
-    g_fAutoRefreshLevels = fAuto;
-}
 
 #ifdef UNICODE
 //

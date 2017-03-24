@@ -79,20 +79,14 @@ typedef struct tag_ObjectDesc {
 
     // These are used internally by the debug library (PRIVATE)
 
-    void WINAPI DbgInitKeyLevels(HKEY hKey, bool fTakeMax);
-    void WINAPI DbgInitGlobalSettings(bool fTakeMax);
-    void WINAPI DbgInitModuleSettings(bool fTakeMax);
     void WINAPI DbgInitModuleName();
-    DWORD WINAPI DbgRegisterObjectCreation(
-        LPCSTR szObjectName, LPCWSTR wszObjectName);
+    DWORD WINAPI DbgRegisterObjectCreation(LPCSTR szObjectName, LPCWSTR wszObjectName);
 
     BOOL WINAPI DbgRegisterObjectDestruction(DWORD dwCookie);
 
     // These are the PUBLIC entry points
 
     BOOL WINAPI DbgCheckModuleLevel(DWORD Type,DWORD Level);
-    void WINAPI DbgSetModuleLevel(DWORD Type,DWORD Level);
-    void WINAPI DbgSetAutoRefreshLevels(bool fAuto);
 
     // Initialise the library with the module handle
 
